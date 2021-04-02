@@ -1,5 +1,6 @@
 package com.example.photogallery
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -20,6 +21,7 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
+import java.util.*
 
 private const val TAG = "PhotoGalleryFragment"
 
@@ -27,6 +29,22 @@ class PhotoGalleryFragment : Fragment() {
     private lateinit var photoRecyclerView: RecyclerView
 
     private lateinit var photoGalleryViewModel: PhotoGalleryViewModel
+
+    interface Callbacks {
+        fun onGalleryItemSelected(galleryItem: GalleryItem)
+    }
+
+    private var callbacks: Callbacks? = null
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        callbacks = context as Callbacks?
+    }
+
+    override fun onDetach() {
+        super.onDetach()
+        callbacks = null
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,19 +65,29 @@ class PhotoGalleryFragment : Fragment() {
         return view
     }
 
-    private inner class PhotoHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    private inner class PhotoHolder(itemView: View) : RecyclerView.ViewHolder(itemView), View.OnClickListener {
         private val imageView: ImageView = itemView.findViewById(R.id.imageView)
 
-        fun bindImageFromUrl(url: String) {
+        private lateinit var galleryItem: GalleryItem
+
+        init {
+            itemView.setOnClickListener(this)
+        }
+
+        fun bindGalleryItem(galleryItem: GalleryItem) {
+            this.galleryItem = galleryItem
             // load the image from a remote url
-            Picasso.get().load(url).resize(400, 400).centerCrop().into(imageView)
+            Picasso.get().load(galleryItem.url).resize(400, 400).centerCrop().into(imageView)
+        }
+
+        override fun onClick(v: View?) {
+            callbacks?.onGalleryItemSelected(galleryItem)
         }
     }
 
     private inner class PhotoAdapter(private val galleryItems: List<GalleryItem>) : RecyclerView.Adapter<PhotoHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoHolder {
             val view = layoutInflater.inflate(R.layout.item_gallery, parent, false)
-            // future: use a layoutinflater to inflate a layout that contains an imageview
             return PhotoHolder(view)
         }
 
@@ -69,7 +97,7 @@ class PhotoGalleryFragment : Fragment() {
 
         override fun onBindViewHolder(holder: PhotoHolder, position: Int) {
             val galleryItem = galleryItems[position]
-            holder.bindImageFromUrl(galleryItem.url)
+            holder.bindGalleryItem(galleryItem)
         }
     }
 
